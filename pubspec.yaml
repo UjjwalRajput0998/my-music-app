@@ -1,0 +1,24 @@
+name: beatbox_music
+description: BeatBox - Music Player App
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  just_audio: ^0.9.36
+  provider: ^6.1.1
+  cached_network_image: ^3.3.0
+  shared_preferences: ^2.2.2
+  audio_session: ^0.1.18
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
