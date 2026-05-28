@@ -24,14 +24,25 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
+      - name: Create Flutter project structure
+        run: |
+          flutter create --org com.beatbox --project-name beatbox_music temp_app
+          rm -rf temp_app/lib
+          cp -r lib temp_app/lib
+          cp pubspec.yaml temp_app/pubspec.yaml
+
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          cd temp_app
+          flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          cd temp_app
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: BeatBox-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: temp_app/build/app/outputs/flutter-apk/app-release.apk
