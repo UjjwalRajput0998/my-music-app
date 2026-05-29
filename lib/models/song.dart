@@ -19,43 +19,22 @@ class Song {
     required this.language,
   });
 
-  factory Song.fromJson(Map<String, dynamic> json) {
-    String audioUrl = '';
-    if (json['downloadUrl'] != null && json['downloadUrl'] is List) {
-      final urls = json['downloadUrl'] as List;
-      if (urls.isNotEmpty) audioUrl = urls.last['url'] ?? '';
-    }
-    String imageUrl = '';
-    if (json['image'] != null && json['image'] is List) {
-      final images = json['image'] as List;
-      if (images.isNotEmpty) imageUrl = images.last['url'] ?? '';
-    }
+  factory Song.fromItunes(Map<String, dynamic> json) {
+    final ms = json['trackTimeMillis'] ?? 0;
+    final totalSec = (ms / 1000).round();
+    final m = (totalSec ~/ 60).toString().padLeft(2, '0');
+    final s = (totalSec % 60).toString().padLeft(2, '0');
+    String image = json['artworkUrl100'] ?? '';
+    image = image.replaceAll('100x100', '500x500');
     return Song(
-      id: json['id']?.toString() ?? '',
-      title: _clean(json['name']?.toString() ?? 'Unknown'),
-      artist: _clean(
-        json['artists']?['primary'] != null
-            ? (json['artists']['primary'] as List)
-                .map((a) => a['name']).join(', ')
-            : 'Unknown Artist',
-      ),
-      album: _clean(json['album']?['name']?.toString() ?? ''),
-      imageUrl: imageUrl,
-      audioUrl: audioUrl,
-      duration: _fmt(
-          int.tryParse(json['duration']?.toString() ?? '0') ?? 0),
-      language: json['language']?.toString() ?? '',
+      id: json['trackId']?.toString() ?? '',
+      title: json['trackName'] ?? 'Unknown',
+      artist: json['artistName'] ?? 'Unknown Artist',
+      album: json['collectionName'] ?? '',
+      imageUrl: image,
+      audioUrl: json['previewUrl'] ?? '',
+      duration: '$m:$s',
+      language: json['primaryGenreName'] ?? '',
     );
-  }
-
-  static String _clean(String t) => t
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#039;', "'");
-
-  static String _fmt(int s) {
-    final m = (s ~/ 60).toString().padLeft(2, '0');
-    final sc = (s % 60).toString().padLeft(2, '0');
-    return '$m:$sc';
   }
 }
