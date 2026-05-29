@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import '../models/song.dart';
+import '../services/api_service.dart';
 
 class MusicProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
@@ -20,8 +21,6 @@ class MusicProvider extends ChangeNotifier {
   Duration get position => _position;
   Duration get duration => _duration;
   List<Song> get favorites => _favorites;
-  List<Song> get queue => _queue;
-  int get currentIndex => _currentIndex;
 
   MusicProvider() {
     _initAudioSession();
@@ -47,26 +46,10 @@ class MusicProvider extends ChangeNotifier {
   Future<void> _initAudioSession() async {
     try {
       final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playback,
-        avAudioSessionCategoryOptions:
-            AVAudioSessionCategoryOptions.allowBluetooth |
-                AVAudioSessionCategoryOptions.defaultToSpeaker,
-        avAudioSessionMode: AVAudioSessionMode.defaultMode,
-        avAudioSessionRouteSharingPolicy:
-            AVAudioSessionRouteSharingPolicy.defaultPolicy,
-        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-        androidAudioAttributes: const AndroidAudioAttributes(
-          contentType: AndroidAudioContentType.music,
-          flags: AndroidAudioFlags.none,
-          usage: AndroidAudioUsage.media,
-        ),
-        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-        androidWillPauseWhenDucked: true,
-      ));
-      await session.setActive(true);
+      await session.configure(
+          const AudioSessionConfiguration.music());
     } catch (e) {
-      print('AudioSession error: $e');
+      print('Session error: $e');
     }
   }
 
@@ -80,6 +63,18 @@ class MusicProvider extends ChangeNotifier {
         if (_currentIndex == -1) _currentIndex = 0;
       }
       notifyListeners();
+
+      if (song.audioUrl.isEmpty) {
+        final url = await ApiService.getAudioUrl(song.id);
+        song.audioUrl = url;
+      }
+
+      if (song.audioUrl.isEmpty) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       await _player.setUrl(song.audioUrl);
       await _player.play();
       _isLoading = false;
@@ -94,9 +89,7 @@ class MusicProvider extends ChangeNotifier {
   Future<void> togglePlay() async {
     try {
       _isPlaying ? await _player.pause() : await _player.play();
-    } catch (e) {
-      print('Toggle error: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> playNext() async {
