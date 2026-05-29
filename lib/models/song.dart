@@ -4,7 +4,7 @@ class Song {
   final String artist;
   final String album;
   final String imageUrl;
-  final String audioUrl;
+  String audioUrl;
   final String duration;
   final String language;
 
@@ -19,22 +19,31 @@ class Song {
     required this.language,
   });
 
-  factory Song.fromItunes(Map<String, dynamic> json) {
-    final ms = json['trackTimeMillis'] ?? 0;
-    final totalSec = (ms / 1000).round();
-    final m = (totalSec ~/ 60).toString().padLeft(2, '0');
-    final s = (totalSec % 60).toString().padLeft(2, '0');
-    String image = json['artworkUrl100'] ?? '';
-    image = image.replaceAll('100x100', '500x500');
+  factory Song.fromYoutube(dynamic video) {
+    String thumb = '';
+    try {
+      thumb = video.thumbnails.highResUrl ?? '';
+    } catch (e) {}
+
+    String dur = '0:00';
+    try {
+      final d = video.duration;
+      if (d != null) {
+        final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+        final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+        dur = '$m:$s';
+      }
+    } catch (e) {}
+
     return Song(
-      id: json['trackId']?.toString() ?? '',
-      title: json['trackName'] ?? 'Unknown',
-      artist: json['artistName'] ?? 'Unknown Artist',
-      album: json['collectionName'] ?? '',
-      imageUrl: image,
-      audioUrl: json['previewUrl'] ?? '',
-      duration: '$m:$s',
-      language: json['primaryGenreName'] ?? '',
+      id: video.id.value,
+      title: video.title ?? 'Unknown',
+      artist: video.author ?? 'Unknown',
+      album: '',
+      imageUrl: thumb,
+      audioUrl: '',
+      duration: dur,
+      language: '',
     );
   }
 }
