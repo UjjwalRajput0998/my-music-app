@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
 import '../models/song.dart';
 
 class MusicProvider extends ChangeNotifier {
@@ -19,8 +20,11 @@ class MusicProvider extends ChangeNotifier {
   Duration get position => _position;
   Duration get duration => _duration;
   List<Song> get favorites => _favorites;
+  List<Song> get queue => _queue;
+  int get currentIndex => _currentIndex;
 
   MusicProvider() {
+    _initAudioSession();
     _player.playerStateStream.listen((state) {
       _isPlaying = state.playing;
       notifyListeners();
@@ -34,17 +38,46 @@ class MusicProvider extends ChangeNotifier {
       notifyListeners();
     });
     _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) playNext();
+      if (state == ProcessingState.completed) {
+        playNext();
+      }
     });
+  }
+
+  Future<void> _initAudioSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.allowBluetooth |
+                AVAudioSessionCategoryOptions.defaultToSpeaker,
+        avAudioSessionMode: AVAudioSessionMode.defaultMode,
+        avAudioSessionRouteSharingPolicy:
+            AVAudioSessionRouteSharingPolicy.defaultPolicy,
+        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        androidAudioAttributes: const AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          flags: AndroidAudioFlags.none,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: true,
+      ));
+      await session.setActive(true);
+    } catch (e) {
+      print('AudioSession error: $e');
+    }
   }
 
   Future<void> playSong(Song song, {List<Song>? queue}) async {
     try {
       _isLoading = true;
       _currentSong = song;
-      if (queue != null) {
+      if (queue != null && queue.isNotEmpty) {
         _queue = queue;
-        _currentIndex = queue.indexOf(song);
+        _currentIndex = queue.indexWhere((s) => s.id == song.id);
+        if (_currentIndex == -1) _currentIndex = 0;
       }
       notifyListeners();
       await _player.setUrl(song.audioUrl);
@@ -53,15 +86,21 @@ class MusicProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      print('Play error: $e');
       notifyListeners();
     }
   }
 
   Future<void> togglePlay() async {
-    _isPlaying ? await _player.pause() : await _player.play();
+    try {
+      _isPlaying ? await _player.pause() : await _player.play();
+    } catch (e) {
+      print('Toggle error: $e');
+    }
   }
 
   Future<void> playNext() async {
+    if (_queue.isEmpty) return;
     if (_currentIndex < _queue.length - 1) {
       _currentIndex++;
       await playSong(_queue[_currentIndex]);
@@ -69,7 +108,10 @@ class MusicProvider extends ChangeNotifier {
   }
 
   Future<void> playPrevious() async {
-    if (_currentIndex > 0) {
+    if (_queue.isEmpty) return;
+    if (_position.inSeconds > 3) {
+      await _player.seek(Duration.zero);
+    } else if (_currentIndex > 0) {
       _currentIndex--;
       await playSong(_queue[_currentIndex]);
     }
@@ -88,7 +130,8 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isFavorite(Song song) => _favorites.any((s) => s.id == song.id);
+  bool isFavorite(Song song) =>
+      _favorites.any((s) => s.id == song.id);
 
   @override
   void dispose() {
