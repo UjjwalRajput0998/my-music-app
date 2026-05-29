@@ -10,10 +10,11 @@ dependencies:
     sdk: flutter
   http: ^1.1.0
   just_audio: ^0.9.36
+  audio_session: ^0.1.18
   provider: ^6.1.1
   cached_network_image: ^3.3.0
   shared_preferences: ^2.2.2
-  audio_session: ^0.1.18
+  youtube_explode_dart: ^2.2.0
 
 dev_dependencies:
   flutter_test:
